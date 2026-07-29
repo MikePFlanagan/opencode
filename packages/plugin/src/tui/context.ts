@@ -35,10 +35,11 @@ export interface Storage {
 
 interface LocationCollection<Value> {
   list(location?: LocationRef): Value[] | undefined
-  sync(location?: LocationRef): Promise<void>
+  sync(location?: LocationRef): Promise<boolean>
   invalidate(location?: LocationRef): void
 }
 
+/** Every sync resolves true when it performed (or joined) a real load, false when already synced. */
 export interface Data {
   readonly on: <Type extends OpenCodeEvent["type"]>(
     type: Type,
@@ -54,44 +55,46 @@ export interface Data {
     status(sessionID: string): "idle" | "running"
     readonly pending: {
       list(sessionID: string): SessionPendingInfo[]
-      sync(sessionID: string): Promise<void>
+      sync(sessionID: string): Promise<boolean>
       invalidate(sessionID: string): void
     }
-    sync(sessionID: string): Promise<void>
+    sync(sessionID: string): Promise<boolean>
     invalidate(sessionID: string): void
+    /** Warms everything a session route reads on mount, so switching to it renders from cache. */
+    prefetch(sessionID: string): Promise<unknown>
     readonly message: {
       list(sessionID: string): SessionMessageInfo[]
       get(sessionID: string, messageID: string): SessionMessageInfo | undefined
-      sync(sessionID: string): Promise<void>
+      sync(sessionID: string): Promise<boolean>
       invalidate(sessionID: string): void
     }
     readonly permission: {
       list(sessionID: string): PermissionRequest[] | undefined
-      sync(sessionID: string): Promise<void>
+      sync(sessionID: string): Promise<boolean>
       invalidate(sessionID: string): void
     }
     readonly form: {
       list(sessionID: string, location?: LocationRef): Array<FormInfo & { readonly location?: LocationRef }> | undefined
-      sync(sessionID: string, location?: LocationRef): Promise<void>
+      sync(sessionID: string, location?: LocationRef): Promise<boolean>
       invalidate(sessionID: string, location?: LocationRef): void
     }
   }
   readonly project: {
     readonly permission: {
       list(projectID: string): PermissionSavedInfo[] | undefined
-      sync(projectID: string): Promise<void>
+      sync(projectID: string): Promise<boolean>
       invalidate(projectID: string): void
     }
   }
   readonly shell: {
     list(location?: LocationRef): ShellInfo[]
     get(id: string): ShellInfo | undefined
-    sync(location?: LocationRef): Promise<void>
+    sync(location?: LocationRef): Promise<boolean>
     invalidate(location?: LocationRef): void
   }
   readonly location: {
     default(): LocationRef
-    sync(location?: LocationRef): Promise<void>
+    sync(location?: LocationRef): Promise<boolean>
     invalidate(location?: LocationRef): void
     readonly agent: LocationCollection<AgentInfo>
     readonly command: LocationCollection<CommandInfo>

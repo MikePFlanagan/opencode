@@ -94,15 +94,17 @@ function locationQuery(ref?: LocationRef) {
 }
 
 function createSync() {
-  const state = new Map<string, true | Promise<void>>()
+  const state = new Map<string, true | Promise<boolean>>()
   return {
-    run(key: string, load: () => Promise<void>) {
+    /** Resolves true when this call performed (or joined) a real load, false when already synced. */
+    run(key: string, load: () => Promise<void>): Promise<boolean> {
       const active = state.get(key)
-      if (active === true) return Promise.resolve()
+      if (active === true) return Promise.resolve(false)
       if (active) return active
       const pending = load()
         .then(() => {
           if (state.get(key) === pending) state.set(key, true)
+          return true
         })
         .finally(() => {
           if (state.get(key) === pending) state.delete(key)
@@ -963,6 +965,16 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
         invalidate(sessionID: string) {
           sync.invalidate(`session:${sessionID}`)
         },
+        /** Warms everything a session route reads on mount, so switching to it renders from cache. */
+        prefetch(sessionID: string) {
+          return Promise.allSettled([
+            result.session.sync(sessionID),
+            result.session.message.sync(sessionID),
+            result.session.pending.sync(sessionID),
+            result.session.permission.sync(sessionID),
+            result.session.form.sync(sessionID),
+          ])
+        },
         message: {
           list(sessionID: string) {
             return store.session.message[sessionID] ?? []
@@ -1084,7 +1096,7 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
         },
         async sync(ref?: LocationRef) {
           const current = ref ?? defaultLocation()
-          await sync.run(`location:${locationKey(current)}`, async () => {
+          const fetched = await sync.run(`location:${locationKey(current)}`, async () => {
             const location = await client.api.location.get({ location: locationQuery(current) })
             const key = locationKey(location)
             if (!store.location[key]) setStore("location", key, {})
@@ -1107,6 +1119,7 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
             result.shell.sync(location),
             result.session.form.sync("global", location),
           ])
+          return fetched
         },
         invalidate(ref?: LocationRef) {
           const location = ref ?? defaultLocation()

@@ -98,6 +98,13 @@ addDefaultParsers(parsers.parsers)
 // Exclude temporary bottom space when measuring the real transcript height.
 const NAVIGATION_SLACK_ID = "session-navigation-slack"
 
+// Tail-first transcript mounting: rows mounted with the session, then backfill cadence.
+// The tail comfortably overfills a tall viewport; backfill drains a 200-message transcript
+// in a few hundred milliseconds without a perceptible pause.
+const TRANSCRIPT_TAIL_ROWS = 40
+const TRANSCRIPT_BACKFILL_CHUNK = 60
+const TRANSCRIPT_BACKFILL_DELAY = 120
+
 const context = createContext<{
   width: number
   sessionID: string
@@ -296,6 +303,46 @@ export function Session() {
     r.set(route.prompt)
   }
 
+  /** Runs after layout has settled (two frames), unless the transcript was torn down. */
+  const afterLayout = (continuation: () => void) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (!scroll || scroll.isDestroyed) return
+        continuation()
+      })
+    })
+  }
+
+  // Tail-first transcript mounting: only the newest rows mount when the session opens, and the
+  // rest backfill in chunks shortly after, so switching to a long session costs the visible tail
+  // instead of the whole transcript. Until backfill pins the count, the hidden span derives from
+  // the row count, so it needs no effect ordering; the clamp keeps at least a tail visible when a
+  // re-reduce shrinks the transcript. Streaming appends land at the end of the visible slice.
+  const [hiddenRows, setHiddenRows] = createSignal<number>()
+  const hidden = createMemo(() => Math.max(0, Math.min(hiddenRows() ?? Infinity, rows.length - TRANSCRIPT_TAIL_ROWS)))
+  const visibleRows = createMemo(() => (hidden() === 0 ? rows : rows.slice(hidden())))
+  createEffect(() => {
+    const current = hidden()
+    if (current === 0) return
+    // Appends reset this timer, so backfill waits for a pause in streaming.
+    const timer = setTimeout(() => {
+      const before = scroll && !scroll.isDestroyed ? scroll.scrollHeight : undefined
+      // Sticky scroll holds the bottom through the mount; compensation is only for readers
+      // who have scrolled up.
+      const atBottom = before === undefined || scroll.scrollTop + scroll.viewport.height >= before - 1
+      setHiddenRows(Math.max(0, current - TRANSCRIPT_BACKFILL_CHUNK))
+      if (atBottom || before === undefined) return
+      afterLayout(() => scroll.scrollBy(scroll.scrollHeight - before))
+    }, TRANSCRIPT_BACKFILL_DELAY)
+    onCleanup(() => clearTimeout(timer))
+  })
+  /** Message navigation needs the full transcript mounted before walking or jumping. */
+  const ensureAllRows = (continuation: () => void) => {
+    if (hidden() === 0) return continuation()
+    setHiddenRows(0)
+    afterLayout(continuation)
+  }
+
   createEffect(() => {
     const current = prompt()
     if (sent || !current || !synced() || !local.model.ready) return
@@ -322,41 +369,41 @@ export function Session() {
         currentSlack: scroll.getRenderable(NAVIGATION_SLACK_ID)?.height ?? 0,
       }),
     )
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (scroll.isDestroyed || navigationMessage() !== messageID) return
-        scroll.scrollTo(top)
+    afterLayout(() => {
+      if (navigationMessage() !== messageID) return
+      scroll.scrollTo(top)
+    })
+  }
+
+  const scrollToMessage = (direction: "next" | "prev", dialog: ReturnType<typeof useDialog>, userOnly = false) =>
+    ensureAllRows(() => {
+      const target = findMessageBoundary({
+        direction,
+        children: scroll.getChildren(),
+        messages: messages(),
+        scrollTop: scroll.scrollTop,
+        viewportY: scroll.viewport.y,
+        currentID: navigationMessage(),
+        userOnly,
       })
-    })
-  }
 
-  const scrollToMessage = (direction: "next" | "prev", dialog: ReturnType<typeof useDialog>, userOnly = false) => {
-    const target = findMessageBoundary({
-      direction,
-      children: scroll.getChildren(),
-      messages: messages(),
-      scrollTop: scroll.scrollTop,
-      viewportY: scroll.viewport.y,
-      currentID: navigationMessage(),
-      userOnly,
-    })
+      if (!target) {
+        dialog.clear()
+        return
+      }
 
-    if (!target) {
+      alignMessage(target.id, target.top)
       dialog.clear()
-      return
-    }
+    })
 
-    alignMessage(target.id, target.top)
-    dialog.clear()
-  }
-
-  const jumpToMessage = (messageID: string) => {
-    const child = scroll.getRenderable(messageID)
-    if (!child) return
-    const y = scroll.scrollTop + child.y - scroll.viewport.y
-    const message = data.session.message.get(route.sessionID, messageID)
-    alignMessage(messageID, Math.max(0, y - (message?.type === "assistant" ? 1 : 0)))
-  }
+  const jumpToMessage = (messageID: string) =>
+    ensureAllRows(() => {
+      const child = scroll.getRenderable(messageID)
+      if (!child) return
+      const y = scroll.scrollTop + child.y - scroll.viewport.y
+      const message = data.session.message.get(route.sessionID, messageID)
+      alignMessage(messageID, Math.max(0, y - (message?.type === "assistant" ? 1 : 0)))
+    })
 
   function toBottom() {
     clearMessageNavigation()
@@ -932,12 +979,12 @@ export function Session() {
               flexGrow={1}
               scrollAcceleration={scrollAcceleration()}
             >
-              <For each={rows}>
+              <For each={visibleRows()}>
                 {(row, index) => (
                   <SessionRowView
                     row={row}
                     message={(messageID) => data.session.message.get(route.sessionID, messageID)}
-                    boundaryID={boundaries()[index()]}
+                    boundaryID={boundaries()[index() + hidden()]}
                   />
                 )}
               </For>

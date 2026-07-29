@@ -1,6 +1,7 @@
 import { createEffect, onCleanup } from "solid-js"
 import { isDeepEqual } from "remeda"
 import { createSimpleContext } from "./helper"
+import { useClient } from "./client"
 import { useData } from "./data"
 import { useEvent } from "./event"
 import { useRoute } from "./route"
@@ -35,6 +36,7 @@ export const { use: useSessionTabs, provider: SessionTabsProvider } = createSimp
   name: "SessionTabs",
   init: () => {
     const route = useRoute()
+    const client = useClient()
     const data = useData()
     const event = useEvent()
     const config = useConfig().data
@@ -126,6 +128,30 @@ export const { use: useSessionTabs, provider: SessionTabsProvider } = createSimp
           result[sessionID] = result[sessionID] === "error" ? "error" : entry[1]
           return result
         }, {})
+      })
+    })
+
+    // Prefetch open tabs' session data so first switches render from cache instead of fetching
+    // inside the switch gesture. The current session's own mount syncs get the first connection
+    // slots; the rest warm sequentially after a beat. sync.run dedupes, so reruns on tab or
+    // connection changes are no-ops for already-warm sessions.
+    createEffect(() => {
+      if (!enabled()) return
+      if (client.connection.status() !== "connected") return
+      const sessions = state()
+        .tabs.map((tab) => tab.sessionID)
+        .filter((sessionID) => sessionID !== current())
+      if (sessions.length === 0) return
+      let stale = false
+      const timer = setTimeout(async () => {
+        for (const sessionID of sessions) {
+          if (stale || client.connection.status() !== "connected") return
+          await data.session.prefetch(sessionID)
+        }
+      }, 300)
+      onCleanup(() => {
+        stale = true
+        clearTimeout(timer)
       })
     })
 

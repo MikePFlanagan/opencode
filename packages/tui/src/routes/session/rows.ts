@@ -88,7 +88,9 @@ export function createSessionRows(sessionID: Accessor<string>) {
       setRows(reconcile(reduce()))
       void data.session.pending.sync(id).catch(() => undefined)
       void data.session.message.sync(id).then(
-        () => {
+        (fetched) => {
+          // Already-synced sessions rendered current data in the initial reduce above.
+          if (!fetched) return
           if (sessionID() !== id) return
           setRows(reconcile(reduce()))
         },
@@ -97,11 +99,16 @@ export function createSessionRows(sessionID: Accessor<string>) {
     }),
   )
 
-  // Re-reduce when the revert boundary changes (stage/clear/commit).
+  // Re-reduce when the revert boundary changes (stage/clear/commit). These reactions defer
+  // their first run: the mount effect above has already reduced the same state.
   createEffect(
-    on(revertBoundary, () => {
-      setRows(reconcile(reduce()))
-    }),
+    on(
+      revertBoundary,
+      () => {
+        setRows(reconcile(reduce()))
+      },
+      { defer: true },
+    ),
   )
 
   createEffect(
@@ -112,6 +119,7 @@ export function createSessionRows(sessionID: Accessor<string>) {
           .filter((item) => item.type === "compaction")
           .map((item) => item.id),
       () => setRows(reconcile(reduce())),
+      { defer: true },
     ),
   )
 
@@ -137,12 +145,11 @@ export function createSessionRows(sessionID: Accessor<string>) {
               : [],
         ),
       () => setRows(reconcile(reduce())),
+      { defer: true },
     ),
   )
 
-  createEffect(
-    on(turnTokens, () => setRows(reconcile(reduce()))),
-  )
+  createEffect(on(turnTokens, () => setRows(reconcile(reduce())), { defer: true }))
 
   const appendMessage = (messageID: string) =>
     setRows(
