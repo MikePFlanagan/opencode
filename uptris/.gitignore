@@ -1,0 +1,42 @@
+# Godot 4
+.godot/
+*.translation
+
+# Imports / generated
+.import/
+*.tmp
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~
+
+# Builds / local export output
+build/
+dist/
+export/export_presets.cfg
+*.apk
+*.aab
+*.ipa
+*.xcodeproj/
+*.xcworkspace/
+*.dSYM/
+
+# Logs / local
+logs/
+*.log
+.validation/
+user://tmp/
+*.pid
+
+# Secrets
+.env
+.env.*
+*.keystore
+*.jks

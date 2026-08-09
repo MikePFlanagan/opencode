@@ -1,0 +1,30 @@
+name: uptris-validate
+
+on:
+  push:
+    paths:
+      - "uptris/**"
+      - ".github/workflows/uptris-validate.yml"
+  pull_request:
+    paths:
+      - "uptris/**"
+      - ".github/workflows/uptris-validate.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Godot
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.4.1
+          use-dotnet: false
+          include-templates: false
+
+      - name: Validate Milestone baseline
+        working-directory: uptris
+        run: |
+          chmod +x scripts/ci/validate.sh
+          ./scripts/ci/validate.sh
