@@ -1,0 +1,25 @@
+{
+  "name": "@opencode/lucid-service-recovery",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Authorized Lucid Air Service Mode recovery & diagnostic utility (read-only by default)",
+  "bin": {
+    "lucid-service-recovery": "./src/cli.ts"
+  },
+  "scripts": {
+    "start": "bun run src/cli.ts",
+    "wizard": "bun run src/cli.ts wizard",
+    "simulate": "bun run src/cli.ts simulate --scenario service-mode-oem-auth",
+    "test": "bun test tests",
+    "typecheck": "bunx tsc --noEmit",
+    "audit-demo": "bun run src/cli.ts escalate --scenario interrupted-update"
+  },
+  "engines": {
+    "bun": ">=1.1.0"
+  },
+  "devDependencies": {
+    "bun-types": "^1.3.14",
+    "typescript": "5.8.3"
+  }
+}
