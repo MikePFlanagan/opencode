@@ -1,0 +1,28 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.1.1, pluggy-1.6.0 -- /usr/bin/python3
+cachedir: .pytest_cache
+benchmark: 5.2.3 (defaults: timer=time.perf_counter disable_gc=False min_rounds=5 min_time=0.000005 max_time=1.0 calibration_precision=10 warmup=False warmup_iterations=100000)
+rootdir: /workspace/quant-platform
+configfile: pyproject.toml
+plugins: benchmark-5.2.3
+collecting ... collected 4 items
+
+benchmarks/test_bench.py::test_ewma_benchmark PASSED                     [ 25%]
+benchmarks/test_bench.py::test_kalman_benchmark PASSED                   [ 50%]
+benchmarks/test_bench.py::test_sobol_benchmark PASSED                    [ 75%]
+benchmarks/test_bench.py::test_gbm_benchmark PASSED                      [100%]
+
+
+-------------------------------------------------------------------------------------------- benchmark: 4 tests -------------------------------------------------------------------------------------------
+Name (time in us)                Min                   Max                  Mean              StdDev                Median                IQR            Outliers         OPS            Rounds  Iterations
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+test_ewma_benchmark         376.8680 (1.0)        501.0150 (1.0)        393.7415 (1.0)       13.0332 (1.0)        390.3580 (1.0)       7.9942 (1.0)       188;158  2,539.7374 (1.0)        1877           1
+test_kalman_benchmark       479.3060 (1.27)       726.4430 (1.45)       511.2328 (1.30)      23.1372 (1.78)       504.0780 (1.29)     19.8015 (2.48)      318;172  1,956.0560 (0.77)       1879           1
+test_sobol_benchmark      1,203.7070 (3.19)     8,690.1040 (17.34)    1,354.5441 (3.44)     657.7307 (50.47)    1,262.3670 (3.23)     40.1423 (5.02)        10;56    738.2558 (0.29)        659           1
+test_gbm_benchmark        1,307.3900 (3.47)     1,780.1760 (3.55)     1,345.9766 (3.42)      57.6516 (4.42)     1,324.2180 (3.39)     29.4088 (3.68)        75;88    742.9550 (0.29)        693           1
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Legend:
+  Outliers: 1 Standard Deviation from Mean; 1.5 IQR (InterQuartile Range) from 1st Quartile and 3rd Quartile.
+  OPS: Operations Per Second, computed as 1 / Mean
+============================== 4 passed in 4.55s ===============================

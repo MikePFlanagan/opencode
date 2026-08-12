@@ -1,0 +1,30 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.1.1, pluggy-1.6.0 -- /usr/bin/python3
+cachedir: .pytest_cache
+benchmark: 5.2.3 (defaults: timer=time.perf_counter disable_gc=False min_rounds=5 min_time=0.000005 max_time=1.0 calibration_precision=10 warmup=False warmup_iterations=100000)
+rootdir: /workspace/quant-platform
+configfile: pyproject.toml
+plugins: benchmark-5.2.3
+collecting ... collected 19 items
+
+tests/test_integrations.py::test_ewma_converges_toward_level PASSED      [  5%]
+tests/test_integrations.py::test_ewma_from_half_life PASSED              [ 10%]
+tests/test_integrations.py::test_kalman_tracks_step PASSED               [ 15%]
+tests/test_integrations.py::test_parkinson_positive PASSED               [ 21%]
+tests/test_integrations.py::test_orderbook_imbalance PASSED              [ 26%]
+tests/test_integrations.py::test_dsl_safe_expression PASSED              [ 31%]
+tests/test_integrations.py::test_strategy_rule PASSED                    [ 36%]
+tests/test_integrations.py::test_risk_kill_switch_blocks PASSED          [ 42%]
+tests/test_integrations.py::test_execution_research_never_live PASSED    [ 47%]
+tests/test_integrations.py::test_live_requires_explicit_enable PASSED    [ 52%]
+tests/test_integrations.py::test_sobol_first_draws PASSED                [ 57%]
+tests/test_integrations.py::test_black_scholes_call_atm_positive PASSED  [ 63%]
+tests/test_integrations.py::test_black_forward_atm PASSED                [ 68%]
+tests/test_integrations.py::test_wiener_reproducible PASSED              [ 73%]
+tests/test_integrations.py::test_gbm_positive PASSED                     [ 78%]
+tests/test_integrations.py::test_sobol_grid PASSED                       [ 84%]
+tests/test_integrations.py::test_backtest_no_lookahead_and_metrics PASSED [ 89%]
+tests/test_integrations.py::test_regime_classification PASSED            [ 94%]
+tests/test_integrations.py::test_returns_features PASSED                 [100%]
+
+============================== 19 passed in 0.02s ==============================
